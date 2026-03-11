@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>入行成本计算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            max-height: 800px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .chat-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message.user .bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.agent {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message.agent .bubble {
+            background: white;
+            color: #333;
+            border-radius: 18px 18px 18px 4px;
+            max-width: 80%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            word-wrap: break-word;
+        }
+
+        .bubble {
+            padding: 12px 16px;
+            font-size: 15px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .chat-input {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            flex-shrink: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input input:focus {
+            border-color: #667eea;
+        }
+
+        .chat-input button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .chat-input button:hover {
+            transform: scale(1.05);
+        }
+
+        .chat-input button:active {
+            transform: scale(0.95);
+        }
+
+        .chat-input button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            border-left: 4px solid #c33;
+        }
+
+        .scroll-hint {
+            text-align: center;
+            padding: 10px;
+            color: #999;
+            font-size: 12px;
+            background: #f0f0f0;
+        }
+
+        /* 优化移动端显示 */
+        @media (max-width: 600px) {
+            body {
+                padding: 0;
+            }
+
+            .chat-container {
+                max-height: 100vh;
+                border-radius: 0;
+            }
+
+            .chat-header h1 {
+                font-size: 18px;
+            }
+
+            .bubble {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🎯 入行成本计算器</h1>
+            <p>AI智能评估助手</p>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="scroll-hint" id="scrollHint">
+                <span>向下滚动查看更多消息 ↓</span>
+            </div>
+        </div>
+
+        <div class="chat-input">
+            <input
+                type="text"
+                id="userInput"
+                placeholder="输入您的问题..."
+                autocomplete="off"
+            />
+            <button id="sendButton" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_URL = 'https://37jfwqddwr.coze.site/stream_run';
+        const API_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjU2ODIxODVhLWU0NjQtNGYxZi04Y2JmLTdiNzM3MTE4Njg1MSJ9.eyJpc3MiOiJodHRwczovL2FwaS5jb3plLmNuIiwiYXVkIjpbInNCMXZBWUFIb093RVZLWDk0Um1wNDhOR0sxWVMwZ1l0Il0sImV4cCI6ODIxMDI2Njg3Njc5OSwiaWF0IjoxNzczMjM3OTk5LCJzdWIiOiJzcGlmZmU6Ly9hcGkuY296ZS5jbi93b3JrbG9hZF9pZGVudGl0eS9pZDo3NjE1OTAwNzg0MDg5MTA0MzkzIiwic3JjIjoiaW5ib3VuZF9hdXRoX2FjY2Vzc190b2tlbl9pZDo3NjE1OTk5MjE3MjMxNzI0NTU0In0.oH4gH5dQ5L_Nkd5pn7zG3M0V03zDcgdTuj1sfKX_V1XgngwI2ULkfqVKuXSR8XwlAegamOitiD-q7npsDHoXyaOiZWmYZJToCVsZkP9_Adx3qaGaxkVukZQTngIfUNE7ljdTy19aVwjB5DVnCeWFpQhx__aY5pUc9BP2ktoIkfiLaYRMsrDmtP3716EAUEi9-nfrs-Og7qaR62HXs4cbHbx5db3umbhsVuz1wM4zNOdiRfTXm8M8O1JZYK0qfWWEK_4GYU9ENwaiqG7CcoaAqnZlopU9OhgXeHC4GjnR62ZU4Xl8mkIulPEEh5B04HzBANyHva3nU7oHPk2hUl9ScQ'; // 请替换为实际的API Token
+        const PROJECT_ID = '7615898207381618698';
+        let session_id = generateSessionId();
+
+        // 生成会话ID
+        function generateSessionId() {
+            return 'session_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        }
+
+        // DOM元素
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const scrollHint = document.getElementById('scrollHint');
+
+        // 添加消息到聊天界面
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'agent'}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = content;
+
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+
+            // 滚动到底部
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // 隐藏滚动提示
+            if (scrollHint) {
+                scrollHint.style.display = 'none';
+            }
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message agent';
+            loadingDiv.id = 'loadingMessage';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'loading';
+
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'loading-dot';
+                bubble.appendChild(dot);
+            }
+
+            const text = document.createElement('span');
+            text.textContent = ' 正在思考...';
+            bubble.appendChild(text);
+
+            loadingDiv.appendChild(bubble);
+            chatMessages.appendChild(loadingDiv);
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 移除加载状态
+        function hideLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            addMessage(`⚠️ 错误：${message}`, false);
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const text = userInput.value.trim();
+
+            if (!text) return;
+
+            // 禁用输入
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            // 显示用户消息
+            addMessage(text, true);
+            userInput.value = '';
+
+            // 显示加载状态
+            showLoading();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: {
+                            query: {
+                                prompt: [{
+                                    type: 'text',
+                                    content: {
+                                        text: text
+                                    }
+                                }]
+                            }
+                        },
+                        type: 'query',
+                        session_id: session_id,
+                        project_id: PROJECT_ID
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // 处理响应
+                let agentMessage = '';
+                if (data && data.content && data.content.output) {
+                    agentMessage = data.content.output;
+                } else if (data && typeof data === 'string') {
+                    agentMessage = data;
+                } else {
+                    agentMessage = '收到您的消息，但我无法正常回复。';
+                }
+
+                hideLoading();
+                addMessage(agentMessage, false);
+
+            } catch (error) {
+                hideLoading();
+                console.error('Error:', error);
+
+                if (error.message.includes('401')) {
+                    showError('API Token无效，请检查配置');
+                } else if (error.message.includes('403')) {
+                    showError('没有访问权限');
+                } else if (error.message.includes('404')) {
+                    showError('API地址不存在');
+                } else {
+                    showError('请求失败：' + error.message);
+                }
+            } finally {
+                // 恢复输入
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // 监听回车键
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 页面加载完成后，自动发送欢迎消息
+        window.onload = function() {
+            addMessage('你好，我是入行成本计算器，请告诉我你的目标行业和城市等级（一线/二线/三线/四线），我来帮你评估入行成本！', false);
+        };
+    </script>
+</body>
+</html>
