@@ -360,19 +360,11 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        content: {
-                            query: {
-                                prompt: [{
-                                    type: 'text',
-                                    content: {
-                                        text: text
-                                    }
-                                }]
-                            }
-                        },
-                        type: 'query',
-                        session_id: session_id,
-                        project_id: PROJECT_ID
+
+                        bot_id: PROJECT_ID,
+                        user: session_id,
+                        query: text,
+                        stream: false
                     })
                 });
 
@@ -384,11 +376,12 @@
 
                 // 处理响应
                 let agentMessage = '';
-                if (data && data.content && data.content.output) {
-                    agentMessage = data.content.output;
-                } else if (data && typeof data === 'string') {
-                    agentMessage = data;
+                if (data && data.data) {
+                    agentMessage = data.data;
+                } else if (data && data.message) {
+                    agentMessage = data.message;
                 } else {
+                    console.log('API Response:', data);
                     agentMessage = '收到您的消息，但我无法正常回复。';
                 }
 
